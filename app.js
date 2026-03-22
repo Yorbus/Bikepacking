@@ -71,6 +71,10 @@ function loadRoute(id) {
     activeRouteId = id;
     localStorage.setItem('active_route_id', id);
 
+    // FORCEER DIRECTE UPDATE VAN DE TEKST (Voor de iPhone traagheid)
+    document.getElementById('dist-todo').innerText = route.distance + " km over";
+    document.getElementById('dist-done').innerText = "0.0 km";
+
     if (activeRouteLayer) map.removeLayer(activeRouteLayer);
     renderRouteList();
 
@@ -81,14 +85,8 @@ function loadRoute(id) {
         const gpx = e.target;
         map.fitBounds(gpx.getBounds());
         routePoints = gpx.get_planar_coords();
-
-        // Pak de afstand direct uit de geladen data
         totalDistance = parseFloat(route.distance);
-
-        // Forceer de UI update onmiddellijk
         updateUI(0, totalDistance);
-
-        console.log("Actieve route afstand:", totalDistance);
         closePages();
     }).addTo(map);
 }
@@ -96,13 +94,11 @@ function loadRoute(id) {
 function deleteRoute(id) {
     savedRoutes = savedRoutes.filter(r => r.id != id);
     localStorage.setItem('bikepack_routes', JSON.stringify(savedRoutes));
-
     if (id == activeRouteId) {
         activeRouteId = null;
         localStorage.removeItem('active_route_id');
         if (activeRouteLayer) map.removeLayer(activeRouteLayer);
         document.getElementById('dist-todo').innerText = "Geen route";
-        document.getElementById('progress-fill').style.width = "0%";
     }
     renderRouteList();
 }
@@ -129,19 +125,12 @@ function calculateProgress(p) {
 }
 
 function updateUI(done, total) {
+    if (!total) return;
     const todo = Math.max(0, total - done);
-    const pct = total > 0 ? (done / total) * 100 : 0;
-
-    // De elementen aanpassen
+    const pct = (done / total) * 100;
     document.getElementById('progress-fill').style.width = pct + "%";
     document.getElementById('dist-done').innerText = done.toFixed(1) + " km";
-
-    const todoEl = document.getElementById('dist-todo');
-    if (total > 0) {
-        todoEl.innerText = todo.toFixed(1) + " km over";
-    } else {
-        todoEl.innerText = "Geen route";
-    }
+    document.getElementById('dist-todo').innerText = todo.toFixed(1) + " km over";
 }
 
 window.onload = () => {
