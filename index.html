@@ -1,118 +1,242 @@
 <!DOCTYPE html>
-<html>
+<html lang="nl">
 
 <head>
-    <title>Offline Bikepack</title>
+    <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" />
+    <title>Bikepack Pro</title>
     <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
     <style>
+        :root {
+            --bg-dark: #121212;
+            --card-bg: #1e1e1e;
+            --accent-bright: #2ecc71;
+            --accent-dark: #27ae60;
+            --text: #e0e0e0;
+        }
+
+        body {
+            margin: 0;
+            padding: 0;
+            background: var(--bg-dark);
+            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+            color: var(--text);
+            overflow: hidden;
+        }
+
         #map {
             height: 100vh;
             width: 100vw;
-            position: fixed;
+            z-index: 1;
+            filter: invert(100%) hue-rotate(180deg) brightness(95%) contrast(90%);
+        }
+
+        /* Top Bar Stats */
+        #top-bar {
+            position: absolute;
             top: 0;
             left: 0;
+            right: 0;
+            z-index: 100;
+            background: linear-gradient(to bottom, rgba(18, 18, 18, 0.9), transparent);
+            display: grid;
+            grid-template-columns: repeat(4, 1fr);
+            padding: 40px 10px 20px;
+            text-align: center;
         }
 
-        #ui {
-            position: absolute;
-            bottom: 20px;
-            left: 10px;
-            z-index: 1000;
+        .stat-item {
             display: flex;
             flex-direction: column;
-            gap: 10px;
         }
 
-        button {
-            padding: 15px;
-            background: #fff;
-            border-radius: 8px;
-            border: 1px solid #ccc;
+        .stat-value {
+            font-size: 1.2rem;
             font-weight: bold;
+            color: var(--accent-bright);
         }
 
-        .stats {
-            background: rgba(0, 0, 0, 0.7);
+        .stat-label {
+            font-size: 0.7rem;
+            text-transform: uppercase;
+            opacity: 0.7;
+        }
+
+        /* Bottom Control Panel */
+        #bottom-panel {
+            position: absolute;
+            bottom: 0;
+            left: 0;
+            right: 0;
+            z-index: 100;
+            background: var(--card-bg);
+            border-top: 2px solid var(--accent-dark);
+            padding: 20px;
+            border-radius: 20px 20px 0 0;
+            box-shadow: 0 -5px 15px rgba(0, 0, 0, 0.5);
+        }
+
+        .progress-container {
+            margin-bottom: 15px;
+        }
+
+        .progress-text {
+            display: flex;
+            justify-content: space-between;
+            font-size: 0.9rem;
+            margin-bottom: 5px;
+        }
+
+        .progress-bar-bg {
+            background: #333;
+            height: 8px;
+            border-radius: 4px;
+            overflow: hidden;
+        }
+
+        #progress-fill {
+            background: var(--accent-bright);
+            width: 0%;
+            height: 100%;
+            transition: width 0.3s;
+        }
+
+        .btn-primary {
+            background: var(--accent-dark);
             color: white;
-            padding: 10px;
-            border-radius: 8px;
-            font-family: monospace;
+            border: none;
+            width: 100%;
+            padding: 15px;
+            border-radius: 12px;
+            font-size: 1rem;
+            font-weight: bold;
+            display: block;
+            text-align: center;
+            box-shadow: 0 4px 6px rgba(0, 0, 0, 0.2);
+            transition: transform 0.1s;
+        }
+
+        .btn-primary:active {
+            transform: scale(0.98);
+            background: var(--accent-bright);
+        }
+
+        /* Leaflet override */
+        .leaflet-control-attribution {
+            display: none;
         }
     </style>
 </head>
 
 <body>
 
-    <div id="ui">
-        <div class="stats" id="info">Snelheid: 0 km/u</div>
-        <input type="file" id="gpxInput" style="display:none" accept=".gpx">
-        <button onclick="document.getElementById('gpxInput').click()">Inladen GPX</button>
-        <button onclick="toggleFollow()">Toggle Volgen</button>
+    <div id="top-bar">
+        <div class="stat-item"><span class="stat-value" id="speed">0</span><span class="stat-label">km/u</span></div>
+        <div class="stat-item"><span class="stat-value" id="altitude">-</span><span class="stat-label">hoogte</span>
+        </div>
+        <div class="stat-item"><span class="stat-value" id="avg-speed">0</span><span class="stat-label">gem.</span>
+        </div>
+        <div class="stat-item"><span class="stat-value" id="time">00:00</span><span class="stat-label">tijd</span></div>
     </div>
 
     <div id="map"></div>
+
+    <div id="bottom-panel">
+        <div class="progress-container">
+            <div class="progress-text">
+                <span id="dist-done">0 km gedaan</span>
+                <span id="dist-todo">0 km te gaan</span>
+            </div>
+            <div class="progress-bar-bg">
+                <div id="progress-fill"></div>
+            </div>
+            <div style="margin-top: 8px; font-size: 0.8rem; text-align: center; opacity: 0.8;">
+                Verwachte aankomst: <span id="eta" style="color: var(--accent-bright);">--:--</span>
+            </div>
+        </div>
+
+        <input type="file" id="gpx-file" style="display:none" accept=".gpx">
+        <button class="btn-primary" onclick="document.getElementById('gpx-file').click()">KIES GPX ROUTE</button>
+    </div>
 
     <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/leaflet-gpx/1.7.0/gpx.min.js"></script>
 
     <script>
-        // 1. Service Worker registratie
-        if ('serviceWorker' in navigator) {
-            navigator.serviceWorker.register('sw.js');
+        const map = L.map('map', { zoomControl: false }).setView([51.05, 3.73], 13);
+
+        // De 'Voyager' stijl met een CSS filter voor Dark Mode
+        L.tileLayer('https://{s}.basemaps.cartocdn.com/rastertiles/voyager/{z}/{x}/{y}{r}.png').addTo(map);
+
+        let totalDist = 0;
+        let avgSpeedArr = [];
+
+        // 1. Automatisch inzoomen op locatie bij opstarten
+        map.locate({ setView: true, maxZoom: 16 });
+
+        const userIcon = L.circleMarker([0, 0], { radius: 8, fillColor: '#2ecc71', color: '#fff', weight: 2, fillOpacity: 1 }).addTo(map);
+
+        // 2. GPS & Statistieken
+        navigator.geolocation.watchPosition(pos => {
+            const { latitude, longitude, speed, altitude } = pos.coords;
+            const latlng = [latitude, longitude];
+
+            userIcon.setLatLng(latlng);
+            map.panTo(latlng);
+
+            // Snelheid berekenen (m/s naar km/u)
+            const currentSpeed = Math.round(speed * 3.6) || 0;
+            document.getElementById('speed').innerText = currentSpeed;
+            if (currentSpeed > 2) avgSpeedArr.push(currentSpeed);
+
+            // Hoogte
+            document.getElementById('altitude').innerText = altitude ? Math.round(altitude) + 'm' : '-';
+
+            // Gemiddelde snelheid
+            const avgSpeed = avgSpeedArr.length ? (avgSpeedArr.reduce((a, b) => a + b) / avgSpeedArr.length).toFixed(1) : 0;
+            document.getElementById('avg-speed').innerText = avgSpeed;
+
+            updateClock();
+            if (totalDist > 0) updateProgress(avgSpeed);
+
+        }, null, { enableHighAccuracy: true });
+
+        function updateClock() {
+            const now = new Date();
+            document.getElementById('time').innerText = now.getHours().toString().padStart(2, '0') + ":" + now.getMinutes().toString().padStart(2, '0');
         }
 
-        // 2. Map Initialisatie
-        const map = L.map('map', { zoomControl: false }).setView([51.505, -0.09], 13);
-
-        // Let op: Voor echt offline gebruik moet je tiles PRE-LOADEN. 
-        // Deze layer probeert online te gaan, tenzij je een offline provider toevoegt.
-        // Deze stijl is 'Voyager', erg strak en modern (Apple Maps-achtig)
-        const tiles = L.tileLayer('https://{s}.basemaps.cartocdn.com/rastertiles/voyager/{z}/{x}/{y}{r}.png', {
-            attribution: '© OpenStreetMap contributors © CARTO',
-            subdomains: 'abcd',
-            maxZoom: 19
-        }).addTo(map);
-
-        let followUser = false;
-        let userMarker = L.circleMarker([0, 0], { color: 'blue', radius: 8 }).addTo(map);
-
-        // 3. GPX Afhandeling
-        document.getElementById('gpxInput').addEventListener('change', function (e) {
+        // 3. GPX Inladen & Berekeningen
+        document.getElementById('gpx-file').addEventListener('change', function (e) {
             const file = e.target.files[0];
             const reader = new FileReader();
             reader.onload = function (evt) {
-                new L.GPX(evt.target.result, {
-                    async: true,
-                    marker_options: { startIconUrl: '', endIconUrl: '', shadowUrl: '' }
-                }).on('loaded', function (e) {
-                    map.fitBounds(e.target.getBounds());
+                new L.GPX(evt.target.result, { async: true }).on('loaded', function (e) {
+                    const gpx = e.target;
+                    map.fitBounds(gpx.getBounds());
+                    totalDist = (gpx.get_distance() / 1000).toFixed(1);
+                    document.getElementById('dist-todo').innerText = totalDist + " km te gaan";
                 }).addTo(map);
             };
             reader.readAsText(file);
         });
 
-        // 4. GPS Tracking (Zuinig op de batterij)
-        function toggleFollow() { followUser = !followUser; }
+        function updateProgress(avg) {
+            // Dit is een simpele simulatie. Voor echt gebruik moet je de afstand over de lijn berekenen t.o.v. je GPS punt.
+            // Voor nu zetten we een placeholder logica:
+            let done = 0; // Hier moet logica komen die kijkt hoe ver je op de route bent.
+            let todo = totalDist - done;
 
-        navigator.geolocation.watchPosition(pos => {
-            const { latitude, longitude, speed } = pos.coords;
-            const latlng = [latitude, longitude];
+            document.getElementById('dist-done').innerText = done + " km gedaan";
+            document.getElementById('dist-todo').innerText = todo.toFixed(1) + " km te gaan";
 
-            userMarker.setLatLng(latlng);
-            if (followUser) map.panTo(latlng);
-
-            document.getElementById('info').innerText = `Snelheid: ${Math.round(speed * 3.6 || 0)} km/u`;
-        }, err => console.error(err), {
-            enableHighAccuracy: true,
-            maximumAge: 1000
-        });
-
-        // 5. De "Offline" Hack voor Tiles
-        // Omdat je programmeur bent: gebruik de 'PouchDB' library om tiles te scrapen.
-        // Een simpele manier is om de tile-urls in een lijst te zetten en ze door de Service Worker te laten 'fetchen' terwijl je op wifi zit.
+            if (avg > 0) {
+                let hoursLeft = todo / avg;
+                let eta = new Date(new Date().getTime() + hoursLeft * 3600000);
+                document.getElementById('eta').innerText = eta.getHours().toString().padStart(2, '0') + ":" + eta.getMinutes().toString().padStart(2, '0');
+            }
+        }
     </script>
-
 </body>
 
 </html>
