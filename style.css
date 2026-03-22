@@ -38,11 +38,6 @@ body {
     text-align: center;
 }
 
-.stat-item {
-    display: flex;
-    flex-direction: column;
-}
-
 .stat-value {
     font-size: 1.4rem;
     font-weight: bold;
@@ -53,6 +48,7 @@ body {
     font-size: 0.7rem;
     text-transform: uppercase;
     opacity: 0.6;
+    display: block;
 }
 
 #bottom-panel {
@@ -63,13 +59,22 @@ body {
     border-top: 2px solid var(--accent-dark);
     padding: 20px 20px 40px;
     border-radius: 20px 20px 0 0;
+    box-shadow: 0 -5px 20px rgba(0, 0, 0, 0.5);
+}
+
+#stats-row {
+    display: flex;
+    justify-content: space-between;
+    font-size: 1.2rem;
+    font-weight: bold;
+    margin-bottom: 15px;
 }
 
 .progress-bar-bg {
     background: #333;
     height: 12px;
     border-radius: 6px;
-    margin: 10px 0;
+    margin-bottom: 15px;
     overflow: hidden;
 }
 
@@ -78,6 +83,25 @@ body {
     width: 0%;
     height: 100%;
     transition: width 0.5s;
+}
+
+.btn-nav {
+    width: 100%;
+    padding: 18px;
+    border-radius: 12px;
+    border: none;
+    font-size: 1.1rem;
+    font-weight: bold;
+    color: white;
+    display: none;
+}
+
+.btn-nav.start {
+    background: var(--accent-dark);
+}
+
+.btn-nav.stop {
+    background: #c0392b;
 }
 
 #menu-toggle {
@@ -91,13 +115,9 @@ body {
     align-items: center;
     justify-content: center;
     border: 1px solid var(--accent-dark);
-}
-
-.hamburger-line {
-    width: 20px;
-    height: 2px;
-    background: var(--accent-bright);
-    box-shadow: 0 6px 0 var(--accent-bright), 0 -6px 0 var(--accent-bright);
+    z-index: 3000 !important;
+    /* DIT IS DE FIX: Altijd bovenop */
+    cursor: pointer;
 }
 
 .full-page {
@@ -110,6 +130,20 @@ body {
     overflow-y: auto;
 }
 
+.hamburger-line {
+    width: 20px;
+    height: 2px;
+    background: var(--accent-bright);
+    box-shadow: 0 6px 0 var(--accent-bright), 0 -6px 0 var(--accent-bright);
+}
+
+
+
+.accent-text {
+    color: var(--accent-bright);
+    margin-bottom: 30px;
+}
+
 .close-btn {
     position: absolute;
     top: 45px;
@@ -118,8 +152,6 @@ body {
     border: none;
     color: var(--accent-bright);
     font-size: 2.5rem;
-    line-height: 1;
-    padding: 0;
 }
 
 .btn-primary {

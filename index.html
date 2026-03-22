@@ -6,6 +6,7 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" />
     <title>Bikepack Pro</title>
     <link rel="manifest" href="manifest.json">
+    <link rel="apple-touch-icon" href="icon.png">
     <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
     <link rel="stylesheet" href="style.css">
 </head>
@@ -31,27 +32,24 @@
         <div class="progress-bar-bg">
             <div id="progress-fill"></div>
         </div>
-        <div
-            style="display:flex; justify-content:space-between; font-size:1.1rem; font-weight: bold; margin-bottom: 15px;">
+        <div id="stats-row">
             <span id="dist-done">0.0 km</span>
             <span id="dist-todo">Geen route</span>
         </div>
-        <button id="start-nav-btn" class="btn-primary" style="display:none; margin-bottom:0;"
-            onclick="startNavigation()">▶ START NAVIGATIE</button>
-        <button id="stop-nav-btn" class="btn-primary" style="display:none; margin-bottom:0; background:#c0392b;"
-            onclick="stopNavigation()">🛑 STOP</button>
+        <button id="start-nav-btn" class="btn-nav start" onclick="startNavigation()">▶ START NAVIGATIE</button>
+        <button id="stop-nav-btn" class="btn-nav stop" onclick="stopNavigation()">🛑 STOP NAVIGATIE</button>
     </div>
 
     <div id="main-menu" class="full-page">
         <button class="close-btn" onclick="toggleMenu()">&times;</button>
-        <h2 style="color:var(--accent-bright); margin-bottom:40px;">Menu</h2>
+        <h2 class="accent-text">Menu</h2>
         <button class="btn-primary" onclick="showRoutes()">🗺️ MIJN ROUTES</button>
         <button class="btn-primary" onclick="showSettings()" style="background:#333;">⚙️ INSTELLINGEN</button>
     </div>
 
     <div id="route-page" class="full-page">
         <button class="close-btn" onclick="closePages()">&times;</button>
-        <h2 style="color:var(--accent-bright); margin-bottom:30px;">Mijn Routes</h2>
+        <h2 class="accent-text">Mijn Routes</h2>
         <input type="file" id="gpx-file" style="display:none" accept=".gpx" multiple>
         <button class="btn-primary" onclick="document.getElementById('gpx-file').click()">+ VOEG GPX TOE</button>
         <div id="route-list"></div>
@@ -59,8 +57,8 @@
 
     <div id="settings-page" class="full-page">
         <button class="close-btn" onclick="closePages()">&times;</button>
-        <h2 style="color:var(--accent-bright); margin-bottom:30px;">Instellingen</h2>
-        <p style="opacity:0.6;">Problemen met routes verwijderen?</p>
+        <h2 class="accent-text">Instellingen</h2>
+        <p style="opacity:0.6;">Problemen? Wis alle lokale gegevens:</p>
         <button class="btn-primary" onclick="resetApp()" style="background:#c0392b;">🔥 RESET ALLE DATA</button>
     </div>
 
