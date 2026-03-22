@@ -1,13 +1,12 @@
 let savedRoutes = JSON.parse(localStorage.getItem('bikepack_routes')) || [];
 let activeRouteLayer = null;
+let activeRouteId = localStorage.getItem('active_route_id') || null;
 let routePoints = [];
 let totalDistance = 0;
 
-// Initialize Map
 const map = L.map('map', { zoomControl: false }).setView([51.05, 3.73], 13);
 L.tileLayer('https://{s}.basemaps.cartocdn.com/rastertiles/voyager/{z}/{x}/{y}{r}.png').addTo(map);
 
-// User Marker
 const userMarker = L.circleMarker([0, 0], { radius: 8, fillColor: '#2ecc71', color: '#fff', weight: 2, fillOpacity: 1 }).addTo(map);
 
 // 1. UI Navigation
@@ -46,17 +45,23 @@ document.getElementById('gpx-file').addEventListener('change', function (e) {
 function renderRouteList() {
     const list = document.getElementById('route-list');
     list.innerHTML = savedRoutes.map(r => `
-        <div class="route-card">
-            <div onclick="loadRoute('${r.id}')" style="flex:1">
-                <strong>${r.name}</strong><br><small style="color:var(--accent-bright)">${r.distance} km</small>
+        <div class="route-card ${r.id == activeRouteId ? 'active' : ''}" onclick="loadRoute('${r.id}')">
+            <div style="flex:1">
+                <strong>${r.name}</strong><br>
+                <small style="color:var(--accent-bright)">${r.distance} km</small>
             </div>
-            <button onclick="deleteRoute('${r.id}')" style="background:none; border:none; color:red; font-size:1.5rem;">&times;</button>
+            <button onclick="event.stopPropagation(); deleteRoute('${r.id}')" style="background:none; border:none; color:#ff4444; font-size:1.8rem; padding:0 10px;">&times;</button>
         </div>
     `).join('');
 }
 
 function loadRoute(id) {
     const route = savedRoutes.find(r => r.id == id);
+    if (!route) return;
+
+    activeRouteId = id;
+    localStorage.setItem('active_route_id', id);
+
     if (activeRouteLayer) map.removeLayer(activeRouteLayer);
 
     activeRouteLayer = new L.GPX(route.data, {
@@ -64,36 +69,42 @@ function loadRoute(id) {
         polyline_options: { color: '#2ecc71', weight: 6, opacity: 0.8 }
     }).on('loaded', (e) => {
         map.fitBounds(e.target.getBounds());
-        routePoints = e.target.get_planar_coords(); // Punten voor afstandsberekening
+        routePoints = e.target.get_planar_coords();
         totalDistance = e.target.get_distance() / 1000;
-        document.getElementById('dist-todo').innerText = totalDistance.toFixed(1) + " km te gaan";
         closePages();
+        updateUI(0, totalDistance); // Reset balkje
     }).addTo(map);
 }
 
 function deleteRoute(id) {
-    savedRoutes = savedRoutes.filter(r => r.id != id);
-    localStorage.setItem('bikepack_routes', JSON.stringify(savedRoutes));
-    renderRouteList();
+    if (confirm("Route definitief verwijderen?")) {
+        savedRoutes = savedRoutes.filter(r => r.id != id);
+        localStorage.setItem('bikepack_routes', JSON.stringify(savedRoutes));
+        if (id == activeRouteId) {
+            activeRouteId = null;
+            if (activeRouteLayer) map.removeLayer(activeRouteLayer);
+            document.getElementById('dist-todo').innerText = "Geen route";
+            document.getElementById('progress-fill').style.width = "0%";
+        }
+        renderRouteList();
+    }
 }
 
-// 3. GPS & Math (Balkje update)
+// 3. GPS & Progress
 navigator.geolocation.watchPosition(pos => {
     const { latitude, longitude, speed, altitude } = pos.coords;
     const p = L.latLng(latitude, longitude);
     userMarker.setLatLng(p);
 
-    // Update Stats
     document.getElementById('speed').innerText = Math.round(speed * 3.6) || 0;
     document.getElementById('altitude').innerText = altitude ? Math.round(altitude) + 'm' : '-';
 
-    if (routePoints.length > 0) {
-        updateProgress(p);
+    if (activeRouteLayer && routePoints.length > 0) {
+        calculateProgress(p);
     }
 }, null, { enableHighAccuracy: true });
 
-function updateProgress(userLatLng) {
-    // Zoek dichtstbijzijnde punt op de route (simpele versie)
+function calculateProgress(userLatLng) {
     let minDist = Infinity;
     let index = 0;
 
@@ -102,20 +113,25 @@ function updateProgress(userLatLng) {
         if (d < minDist) { minDist = d; index = i; }
     });
 
-    // Bereken afstand over de lijn
     let distanceDone = 0;
     for (let i = 0; i < index; i++) {
         distanceDone += L.latLng(routePoints[i]).distanceTo(L.latLng(routePoints[i + 1]));
     }
 
-    const doneKm = distanceDone / 1000;
-    const todoKm = totalDistance - doneKm;
-    const pct = (doneKm / totalDistance) * 100;
-
-    document.getElementById('progress-fill').style.width = pct + "%";
-    document.getElementById('dist-done').innerText = doneKm.toFixed(1) + " km gedaan";
-    document.getElementById('dist-todo').innerText = todoKm.toFixed(1) + " km te gaan";
+    updateUI(distanceDone / 1000, totalDistance);
 }
+
+function updateUI(done, total) {
+    const todo = total - done;
+    const pct = (done / total) * 100;
+    document.getElementById('progress-fill').style.width = pct + "%";
+    document.getElementById('dist-done').innerText = done.toFixed(1) + " km";
+    document.getElementById('dist-todo').innerText = todo.toFixed(1) + " km over";
+}
+
+// Startup
+map.locate({ setView: true, maxZoom: 15 });
+if (activeRouteId) loadRoute(activeRouteId);
 
 // Clock
 setInterval(() => {

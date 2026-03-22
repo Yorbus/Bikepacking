@@ -22,7 +22,6 @@ body {
     filter: invert(100%) hue-rotate(180deg) brightness(95%);
 }
 
-/* UI Elements */
 .overlay {
     position: fixed;
     z-index: 1000;
@@ -66,7 +65,6 @@ body {
     border-radius: 20px 20px 0 0;
 }
 
-/* Progress Bar */
 .progress-bar-bg {
     background: #333;
     height: 10px;
@@ -82,7 +80,6 @@ body {
     transition: width 0.5s;
 }
 
-/* Menu & Buttons */
 #menu-toggle {
     top: 45px;
     right: 20px;
@@ -113,6 +110,18 @@ body {
     overflow-y: auto;
 }
 
+.close-btn {
+    position: absolute;
+    top: 45px;
+    right: 20px;
+    background: none;
+    border: none;
+    color: var(--accent-bright);
+    font-size: 2.5rem;
+    line-height: 1;
+    padding: 0;
+}
+
 .btn-primary {
     background: var(--accent-dark);
     color: white;
@@ -122,16 +131,20 @@ body {
     border-radius: 12px;
     font-size: 1rem;
     font-weight: bold;
-    margin-bottom: 10px;
+    margin-bottom: 20px;
 }
 
 .route-card {
     background: var(--card-bg);
     padding: 15px;
     border-radius: 12px;
-    margin-bottom: 10px;
+    margin-bottom: 12px;
     border: 1px solid #333;
     display: flex;
     justify-content: space-between;
     align-items: center;
+}
+
+.route-card.active {
+    border: 2px solid var(--accent-bright);
 }

@@ -5,7 +5,6 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" />
     <title>Bikepack Pro</title>
-    <link rel="manifest" href="manifest.json">
     <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
     <link rel="stylesheet" href="style.css">
 </head>
@@ -31,26 +30,28 @@
         <div class="progress-bar-bg">
             <div id="progress-fill"></div>
         </div>
-        <div style="display:flex; justify-content:space-between; font-size:0.8rem;">
-            <span id="dist-done">0 km gedaan</span>
-            <span id="dist-todo">Selecteer route</span>
+        <div style="display:flex; justify-content:space-between; font-size:0.9rem; font-weight: bold;">
+            <span id="dist-done">0.0 km</span>
+            <span id="dist-todo">Geen route</span>
         </div>
     </div>
 
     <div id="main-menu" class="full-page">
-        <h2 style="color:var(--accent-bright)">Menu</h2>
+        <button class="close-btn" onclick="toggleMenu()">&times;</button>
+        <h2 style="color:var(--accent-bright); margin-bottom:40px;">Menu</h2>
         <button class="btn-primary" onclick="showRoutes()">🗺️ MIJN ROUTES</button>
-        <button class="btn-primary" onclick="closePages()" style="background:#444">TERUG NAAR KAART</button>
+        <button class="btn-primary" style="background:#333;">⚙️ INSTELLINGEN</button>
     </div>
 
     <div id="route-page" class="full-page">
-        <div style="display:flex; justify-content:space-between; align-items:center;">
-            <h2 style="color:var(--accent-bright)">Routes</h2>
-            <button onclick="closePages()" style="background:none; border:none; color:white;">Sluiten</button>
-        </div>
+        <button class="close-btn" onclick="closePages()">&times;</button>
+        <h2 style="color:var(--accent-bright); margin-bottom:30px;">Mijn Routes</h2>
+
         <input type="file" id="gpx-file" style="display:none" accept=".gpx" multiple>
         <button class="btn-primary" onclick="document.getElementById('gpx-file').click()">+ VOEG GPX TOE</button>
-        <div id="route-list"></div>
+
+        <div id="route-list">
+        </div>
     </div>
 
     <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
