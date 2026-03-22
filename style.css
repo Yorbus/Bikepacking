@@ -1,0 +1,137 @@
+:root {
+    --bg-dark: #121212;
+    --card-bg: #1e1e1e;
+    --accent-bright: #2ecc71;
+    --accent-dark: #27ae60;
+    --text: #e0e0e0;
+}
+
+body {
+    margin: 0;
+    padding: 0;
+    background: var(--bg-dark);
+    font-family: -apple-system, system-ui, sans-serif;
+    color: var(--text);
+    overflow: hidden;
+}
+
+#map {
+    height: 100vh;
+    width: 100vw;
+    z-index: 1;
+    filter: invert(100%) hue-rotate(180deg) brightness(95%);
+}
+
+/* UI Elements */
+.overlay {
+    position: fixed;
+    z-index: 1000;
+}
+
+#top-bar {
+    top: 0;
+    left: 0;
+    right: 0;
+    background: linear-gradient(to bottom, rgba(18, 18, 18, 0.9), transparent);
+    display: grid;
+    grid-template-columns: repeat(4, 1fr);
+    padding: 45px 10px 20px;
+    text-align: center;
+}
+
+.stat-item {
+    display: flex;
+    flex-direction: column;
+}
+
+.stat-value {
+    font-size: 1.2rem;
+    font-weight: bold;
+    color: var(--accent-bright);
+}
+
+.stat-label {
+    font-size: 0.7rem;
+    text-transform: uppercase;
+    opacity: 0.6;
+}
+
+#bottom-panel {
+    bottom: 0;
+    left: 0;
+    right: 0;
+    background: var(--card-bg);
+    border-top: 2px solid var(--accent-dark);
+    padding: 20px 20px 35px;
+    border-radius: 20px 20px 0 0;
+}
+
+/* Progress Bar */
+.progress-bar-bg {
+    background: #333;
+    height: 10px;
+    border-radius: 5px;
+    margin: 10px 0;
+    overflow: hidden;
+}
+
+#progress-fill {
+    background: var(--accent-bright);
+    width: 0%;
+    height: 100%;
+    transition: width 0.5s;
+}
+
+/* Menu & Buttons */
+#menu-toggle {
+    top: 45px;
+    right: 20px;
+    background: var(--card-bg);
+    width: 45px;
+    height: 45px;
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    border: 1px solid var(--accent-dark);
+}
+
+.hamburger-line {
+    width: 20px;
+    height: 2px;
+    background: var(--accent-bright);
+    box-shadow: 0 6px 0 var(--accent-bright), 0 -6px 0 var(--accent-bright);
+}
+
+.full-page {
+    display: none;
+    position: fixed;
+    inset: 0;
+    background: var(--bg-dark);
+    z-index: 2000;
+    padding: 60px 20px;
+    overflow-y: auto;
+}
+
+.btn-primary {
+    background: var(--accent-dark);
+    color: white;
+    border: none;
+    width: 100%;
+    padding: 15px;
+    border-radius: 12px;
+    font-size: 1rem;
+    font-weight: bold;
+    margin-bottom: 10px;
+}
+
+.route-card {
+    background: var(--card-bg);
+    padding: 15px;
+    border-radius: 12px;
+    margin-bottom: 10px;
+    border: 1px solid #333;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+}
