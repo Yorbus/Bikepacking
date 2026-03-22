@@ -96,6 +96,48 @@ body {
     display: none;
 }
 
+.nav-instruction {
+    display: flex;
+    align-items: center;
+    background: var(--card-bg);
+    padding: 15px;
+    border-radius: 12px;
+    margin-bottom: 15px;
+    border: 2px solid var(--accent-dark);
+}
+
+.nav-icon {
+    font-size: 2.5rem;
+    margin-right: 15px;
+    width: 60px;
+    height: 60px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    background: var(--accent-dark);
+    border-radius: 50%;
+    color: white;
+    font-weight: bold;
+}
+
+.nav-text {
+    flex: 1;
+}
+
+.nav-text div {
+    font-weight: bold;
+}
+
+#nav-step {
+    font-size: 1.2rem;
+    color: var(--accent-bright);
+}
+
+#nav-dist {
+    font-size: 0.9rem;
+    opacity: 0.8;
+}
+
 .btn-nav.start {
     background: var(--accent-dark);
 }
@@ -175,9 +217,44 @@ body {
     display: flex;
     justify-content: space-between;
     align-items: center;
+    transition: all 0.3s ease;
+}
+
+.route-card:hover {
+    border-color: #555;
+    transform: translateY(-1px);
 }
 
 .route-card.active {
     border-color: var(--accent-bright);
     background: #252525;
+    box-shadow: 0 0 10px rgba(46, 204, 113, 0.2);
+}
+
+.delete-btn {
+    background: none;
+    border: none;
+    color: #ff4444;
+    font-size: 1.5rem;
+    cursor: pointer;
+    width: 30px;
+    height: 30px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    border-radius: 50%;
+    transition: background 0.2s;
+}
+
+.delete-btn:hover {
+    background: rgba(255, 68, 68, 0.1);
+}
+
+.user-dot {
+    width: 20px;
+    height: 20px;
+    background: #2ecc71;
+    border: 3px solid white;
+    border-radius: 50%;
+    box-shadow: 0 0 10px rgba(0, 0, 0, 0.5);
 }

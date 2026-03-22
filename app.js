@@ -1,76 +1,159 @@
+// Bikepack Pro - Navigatie App
+// Geoptimaliseerde en opgekuiste versie
+
+// --- Globale variabelen ---
 let savedRoutes = JSON.parse(localStorage.getItem('bikepack_routes')) || [];
 let activeRouteLayer = null;
 let activeRouteId = localStorage.getItem('active_route_id') || null;
 let routePoints = [];
 let totalDistance = 0;
 let isNavigating = false;
+let gpsWatchId = null;
 
-// Kaart setup
-const map = L.map('map', { zoomControl: false }).setView([51.05, 3.73], 13);
+// --- Kaart initialisatie ---
+const map = L.map('map', {
+    zoomControl: false,
+    center: [51.05, 3.73],
+    zoom: 13
+});
+
 L.tileLayer('https://{s}.basemaps.cartocdn.com/rastertiles/voyager/{z}/{x}/{y}{r}.png').addTo(map);
 
 const userMarker = L.marker([0, 0], {
     icon: L.divIcon({
         className: 'user-icon',
-        html: '<div style="width:20px;height:20px;background:#2ecc71;border:3px solid white;border-radius:50%;box-shadow:0 0 10px rgba(0,0,0,0.5);"></div>'
+        html: '<div class="user-dot"></div>'
     })
 }).addTo(map);
 
+// --- UI Elementen ---
+const elements = {
+    speed: document.getElementById('speed'),
+    altitude: document.getElementById('altitude'),
+    avgSpeed: document.getElementById('avg-speed'),
+    time: document.getElementById('time'),
+    distDone: document.getElementById('dist-done'),
+    distTodo: document.getElementById('dist-todo'),
+    progressFill: document.getElementById('progress-fill'),
+    startBtn: document.getElementById('start-nav-btn'),
+    stopBtn: document.getElementById('stop-nav-btn'),
+    navInstruction: document.getElementById('nav-instruction'),
+    navIcon: document.getElementById('nav-icon'),
+    navStep: document.getElementById('nav-step'),
+    navDist: document.getElementById('nav-dist'),
+    routeList: document.getElementById('route-list'),
+    gpxFile: document.getElementById('gpx-file'),
+    mainMenu: document.getElementById('main-menu'),
+    routePage: document.getElementById('route-page'),
+    settingsPage: document.getElementById('settings-page')
+};
+
 // --- Menu Functies ---
 function toggleMenu() {
-    const m = document.getElementById('main-menu');
-    m.style.display = (m.style.display === 'block') ? 'none' : 'block';
+    elements.mainMenu.style.display = elements.mainMenu.style.display === 'block' ? 'none' : 'block';
 }
-function showRoutes() { closePages(); document.getElementById('route-page').style.display = 'block'; renderRouteList(); }
-function showSettings() { closePages(); document.getElementById('settings-page').style.display = 'block'; }
-function closePages() {
-    document.getElementById('main-menu').style.display = 'none';
-    document.getElementById('route-page').style.display = 'none';
-    document.getElementById('settings-page').style.display = 'none';
-}
-function resetApp() { if (confirm("Wis alles?")) { localStorage.clear(); location.reload(); } }
 
-// --- Route laden ---
+function showRoutes() {
+    closePages();
+    elements.routePage.style.display = 'block';
+    renderRouteList();
+}
+
+function showSettings() {
+    closePages();
+    elements.settingsPage.style.display = 'block';
+}
+
+function closePages() {
+    elements.mainMenu.style.display = 'none';
+    elements.routePage.style.display = 'none';
+    elements.settingsPage.style.display = 'none';
+}
+
+function resetApp() {
+    if (confirm("Weet u zeker dat u alle gegevens wilt wissen?")) {
+        localStorage.clear();
+        location.reload();
+    }
+}
+
+// --- Route Management ---
 function loadRoute(id) {
-    const route = savedRoutes.find(r => r.id == id);
+    const route = savedRoutes.find(r => r.id === id);
     if (!route) return;
 
     activeRouteId = id;
     localStorage.setItem('active_route_id', id);
-
-    // Forceer UI direct
-    document.getElementById('dist-todo').innerText = route.distance + " km over";
-    document.getElementById('start-nav-btn').style.display = 'block';
-    document.getElementById('stop-nav-btn').style.display = 'none';
-    document.getElementById('nav-instruction').style.display = 'none';
-
     totalDistance = parseFloat(route.distance);
     isNavigating = false;
-    closePages();
 
-    if (activeRouteLayer) map.removeLayer(activeRouteLayer);
+    // UI direct updaten
+    elements.distTodo.innerText = `${route.distance} km over`;
+    elements.startBtn.style.display = 'block';
+    elements.stopBtn.style.display = 'none';
+    elements.navInstruction.style.display = 'none';
+
+    closePages();
     renderRouteList();
 
+    // Vorige route verwijderen
+    if (activeRouteLayer) {
+        map.removeLayer(activeRouteLayer);
+    }
+
+    // Nieuwe route laden
     activeRouteLayer = new L.GPX(route.data, {
         async: true,
-        polyline_options: { color: '#2ecc71', weight: 6, opacity: 0.8 }
+        polyline_options: {
+            color: '#2ecc71',
+            weight: 6,
+            opacity: 0.8
+        }
     }).on('loaded', (e) => {
         map.fitBounds(e.target.getBounds(), { padding: [40, 40] });
         routePoints = e.target.get_planar_coords();
     }).addTo(map);
 }
 
-// --- START NAVIGATIE (NU EXTRA ROBUUST) ---
+function deleteRoute(id) {
+    savedRoutes = savedRoutes.filter(r => r.id !== id);
+    localStorage.setItem('bikepack_routes', JSON.stringify(savedRoutes));
+
+    if (id === activeRouteId) {
+        activeRouteId = null;
+        localStorage.removeItem('active_route_id');
+        location.reload();
+    } else {
+        renderRouteList();
+    }
+}
+
+function renderRouteList() {
+    if (!elements.routeList) return;
+
+    elements.routeList.innerHTML = savedRoutes.map(route => `
+        <div class="route-card ${route.id === activeRouteId ? 'active' : ''}" onclick="loadRoute('${route.id}')">
+            <div style="flex:1">
+                <strong>${route.name}</strong>
+                <br><small>${route.distance} km</small>
+            </div>
+            <button onclick="event.stopPropagation(); deleteRoute('${route.id}')" 
+                    class="delete-btn" title="Verwijder route">
+                ×
+            </button>
+        </div>
+    `).join('');
+}
+
+// --- Navigatie ---
 function startNavigation() {
-    console.log("Start knop ingedrukt");
     isNavigating = true;
 
-    // Toon/Verberg elementen
-    document.getElementById('nav-instruction').style.display = 'flex';
-    document.getElementById('start-nav-btn').style.display = 'none';
-    document.getElementById('stop-nav-btn').style.display = 'block';
+    elements.navInstruction.style.display = 'flex';
+    elements.startBtn.style.display = 'none';
+    elements.stopBtn.style.display = 'block';
 
-    // Zoom in op gebruiker als de locatie bekend is
+    // Zoom naar gebruiker als locatie bekend is
     const currentPos = userMarker.getLatLng();
     if (currentPos.lat !== 0) {
         map.setView(currentPos, 18, { animate: true });
@@ -79,117 +162,225 @@ function startNavigation() {
 
 function stopNavigation() {
     isNavigating = false;
-    document.getElementById('nav-instruction').style.display = 'none';
-    document.getElementById('start-nav-btn').style.display = 'block';
-    document.getElementById('stop-nav-btn').style.display = 'none';
-    if (activeRouteLayer) map.fitBounds(activeRouteLayer.getBounds());
+
+    elements.navInstruction.style.display = 'none';
+    elements.startBtn.style.display = 'block';
+    elements.stopBtn.style.display = 'none';
+
+    if (activeRouteLayer) {
+        map.fitBounds(activeRouteLayer.getBounds());
+    }
 }
 
-// --- GPS ---
-navigator.geolocation.watchPosition(pos => {
-    const { latitude, longitude, speed } = pos.coords;
-    const p = L.latLng(latitude, longitude);
-    userMarker.setLatLng(p);
+// --- GPS Tracking ---
+function initGPS() {
+    if (gpsWatchId) return;
 
-    const speedKmH = Math.round(speed * 3.6) || 0;
-    document.getElementById('speed').innerText = speedKmH;
+    gpsWatchId = navigator.geolocation.watchPosition(
+        handlePosition,
+        handleGPSError,
+        {
+            enableHighAccuracy: true,
+            maximumAge: 10000,
+            timeout: 5000
+        }
+    );
+}
+
+function handlePosition(position) {
+    const { latitude, longitude, speed, altitude } = position.coords;
+    const userPos = L.latLng(latitude, longitude);
+
+    userMarker.setLatLng(userPos);
+
+    // Snelheid updaten
+    const speedKmH = speed ? Math.round(speed * 3.6) : 0;
+    elements.speed.innerText = speedKmH;
+
+    // Hoogte updaten
+    if (altitude) {
+        elements.altitude.innerText = `${Math.round(altitude)}m`;
+    }
 
     if (isNavigating) {
-        map.panTo(p);
-        analyzeRouteAhead(p);
+        map.panTo(userPos);
+        analyzeRouteAhead(userPos);
     }
-}, (err) => console.error(err), { enableHighAccuracy: true });
+}
 
+function handleGPSError(error) {
+    console.error('GPS fout:', error.message);
+    elements.speed.innerText = 'N/A';
+}
+
+// --- Route Analyse ---
 function analyzeRouteAhead(userPos) {
     if (!routePoints || routePoints.length < 5) return;
 
-    let minDist = Infinity, idx = 0;
-    routePoints.forEach((pt, i) => {
-        const d = userPos.distanceTo([pt.lat, pt.lon]);
-        if (d < minDist) { minDist = d; idx = i; }
+    const nearestPoint = findNearestPoint(userPos);
+    const lookAheadPoint = getLookAheadPoint(nearestPoint.index);
+
+    const distanceToAction = userPos.distanceTo([
+        lookAheadPoint.lat,
+        lookAheadPoint.lon
+    ]);
+
+    const turnDirection = calculateTurnDirection(nearestPoint.index);
+
+    updateNavigationUI(turnDirection, distanceToAction);
+    updateProgress(nearestPoint.index);
+}
+
+function findNearestPoint(userPos) {
+    let minDist = Infinity;
+    let nearestIndex = 0;
+
+    routePoints.forEach((point, index) => {
+        const distance = userPos.distanceTo([point.lat, point.lon]);
+        if (distance < minDist) {
+            minDist = distance;
+            nearestIndex = index;
+        }
     });
 
-    let lookAheadIdx = Math.min(idx + 10, routePoints.length - 1);
-    let distToAction = userPos.distanceTo([routePoints[lookAheadIdx].lat, routePoints[lookAheadIdx].lon]);
+    return { index: nearestIndex, distance: minDist };
+}
 
-    // Bereken hoek
-    let b1 = getBearing(routePoints[idx], routePoints[Math.min(idx + 3, routePoints.length - 1)]);
-    let b2 = getBearing(routePoints[Math.min(idx + 3, routePoints.length - 1)], routePoints[lookAheadIdx]);
-    let diff = b2 - b1;
+function getLookAheadPoint(startIndex) {
+    const lookAheadIndex = Math.min(startIndex + 10, routePoints.length - 1);
+    return routePoints[lookAheadIndex];
+}
+
+function calculateTurnDirection(index) {
+    const p1 = routePoints[index];
+    const p2 = routePoints[Math.min(index + 3, routePoints.length - 1)];
+    const p3 = routePoints[Math.min(index + 10, routePoints.length - 1)];
+
+    const bearing1 = getBearing(p1, p2);
+    const bearing2 = getBearing(p2, p3);
+
+    let diff = bearing2 - bearing1;
     if (diff > 180) diff -= 360;
     if (diff < -180) diff += 360;
 
-    let icon = "↑", text = "Weg volgen";
-    if (diff > 25) { icon = "→"; text = "Sla rechtsaf"; }
-    else if (diff < -25) { icon = "←"; text = "Sla linksaf"; }
-
-    document.getElementById('nav-icon').innerText = icon;
-    document.getElementById('nav-step').innerText = text;
-    document.getElementById('nav-dist').innerText = Math.round(distToAction) + " m";
-
-    const done = (idx / routePoints.length) * totalDistance;
-    updateUI(done, totalDistance);
+    if (diff > 25) return { icon: '→', text: 'Sla rechtsaf' };
+    if (diff < -25) return { icon: '←', text: 'Sla linksaf' };
+    return { icon: '↑', text: 'Weg volgen' };
 }
 
 function getBearing(p1, p2) {
     if (!p1 || !p2) return 0;
-    const lat1 = p1.lat * Math.PI / 180, lat2 = p2.lat * Math.PI / 180;
-    const lon1 = p1.lon * Math.PI / 180, lon2 = p2.lon * Math.PI / 180;
+
+    const lat1 = p1.lat * Math.PI / 180;
+    const lat2 = p2.lat * Math.PI / 180;
+    const lon1 = p1.lon * Math.PI / 180;
+    const lon2 = p2.lon * Math.PI / 180;
+
     const y = Math.sin(lon2 - lon1) * Math.cos(lat2);
     const x = Math.cos(lat1) * Math.sin(lat2) - Math.sin(lat1) * Math.cos(lat2) * Math.cos(lon2 - lon1);
-    return Math.atan2(y, x) * 180 / Math.PI;
+
+    return (Math.atan2(y, x) * 180 / Math.PI + 360) % 360;
 }
 
-function updateUI(done, total) {
-    const pct = total > 0 ? (done / total) * 100 : 0;
-    document.getElementById('progress-fill').style.width = pct + "%";
-    document.getElementById('dist-done').innerText = done.toFixed(1) + " km";
-    document.getElementById('dist-todo').innerText = Math.max(0, total - done).toFixed(1) + " km over";
+function updateNavigationUI(direction, distance) {
+    elements.navIcon.innerText = direction.icon;
+    elements.navStep.innerText = direction.text;
+    elements.navDist.innerText = `${Math.round(distance)} m`;
+}
+
+function updateProgress(index) {
+    const progress = totalDistance > 0 ? (index / routePoints.length) * 100 : 0;
+    const distanceDone = (index / routePoints.length) * totalDistance;
+    const distanceRemaining = Math.max(0, totalDistance - distanceDone);
+
+    elements.progressFill.style.width = `${progress}%`;
+    elements.distDone.innerText = `${distanceDone.toFixed(1)} km`;
+    elements.distTodo.innerText = `${distanceRemaining.toFixed(1)} km over`;
+}
+
+// --- GPX Import ---
+elements.gpxFile.addEventListener('change', handleGPXFiles);
+
+function handleGPXFiles(event) {
+    const files = Array.from(event.target.files);
+
+    files.forEach(file => {
+        if (!file.name.toLowerCase().endsWith('.gpx')) {
+            alert(`Bestand ${file.name} is geen GPX-bestand`);
+            return;
+        }
+
+        const reader = new FileReader();
+        reader.onload = (e) => processGPXFile(e.target.result, file.name);
+        reader.readAsText(file);
+    });
+
+    // Reset file input
+    event.target.value = '';
+}
+
+function processGPXFile(gpxData, fileName) {
+    try {
+        const gpxLayer = new L.GPX(gpxData, { async: true });
+
+        gpxLayer.on('loaded', (e) => {
+            const distance = (e.target.get_distance() / 1000).toFixed(1);
+            const routeName = fileName.replace('.gpx', '');
+            const routeId = `r-${Date.now()}`;
+
+            const newRoute = {
+                id: routeId,
+                name: routeName,
+                distance: distance,
+                data: gpxData
+            };
+
+            savedRoutes.push(newRoute);
+            localStorage.setItem('bikepack_routes', JSON.stringify(savedRoutes));
+            renderRouteList();
+
+            // Automatisch laden als dit de eerste route is
+            if (savedRoutes.length === 1) {
+                loadRoute(routeId);
+            }
+        });
+
+        gpxLayer.on('error', (e) => {
+            console.error('GPX fout:', e.error);
+            alert(`Fout bij het verwerken van ${fileName}: ${e.error.message}`);
+        });
+
+    } catch (error) {
+        console.error('Verwerkingsfout:', error);
+        alert(`Kon ${fileName} niet verwerken: ${error.message}`);
+    }
 }
 
 // --- Initialisatie ---
-document.getElementById('gpx-file').addEventListener('change', function (e) {
-    Array.from(e.target.files).forEach(file => {
-        const reader = new FileReader();
-        reader.onload = (evt) => {
-            const gpxData = evt.target.result;
-            new L.GPX(gpxData, { async: true }).on('loaded', (ev) => {
-                const dist = (ev.target.get_distance() / 1000).toFixed(1);
-                const newId = 'r-' + Date.now();
-                savedRoutes.push({ id: newId, name: file.name.replace('.gpx', ''), distance: dist, data: gpxData });
-                localStorage.setItem('bikepack_routes', JSON.stringify(savedRoutes));
-                renderRouteList();
-            });
-        };
-        reader.readAsText(file);
+function init() {
+    renderRouteList();
+
+    if (activeRouteId) {
+        setTimeout(() => loadRoute(activeRouteId), 500);
+    }
+
+    map.locate({
+        setView: true,
+        maxZoom: 14,
+        enableHighAccuracy: true
     });
-});
 
-function renderRouteList() {
-    const list = document.getElementById('route-list');
-    if (!list) return;
-    list.innerHTML = savedRoutes.map(r => `
-        <div class="route-card ${r.id == activeRouteId ? 'active' : ''}" onclick="loadRoute('${r.id}')">
-            <div style="flex:1"><strong>${r.name}</strong><br><small>${r.distance} km</small></div>
-            <button onclick="event.stopPropagation(); deleteRoute('${r.id}')" style="color:#ff4444; background:none; border:none; font-size:1.5rem;">&times;</button>
-        </div>
-    `).join('');
+    initGPS();
+    updateTime();
+    setInterval(updateTime, 60000); // Update elke minuut
 }
 
-function deleteRoute(id) {
-    savedRoutes = savedRoutes.filter(r => r.id != id);
-    localStorage.setItem('bikepack_routes', JSON.stringify(savedRoutes));
-    if (id == activeRouteId) location.reload();
-    renderRouteList();
+function updateTime() {
+    const now = new Date();
+    const hours = String(now.getHours()).padStart(2, '0');
+    const minutes = String(now.getMinutes()).padStart(2, '0');
+    elements.time.innerText = `${hours}:${minutes}`;
 }
 
-window.onload = () => {
-    renderRouteList();
-    if (activeRouteId) setTimeout(() => loadRoute(activeRouteId), 500);
-    map.locate({ setView: true, maxZoom: 14 });
-};
-
-setInterval(() => {
-    const n = new Date();
-    document.getElementById('time').innerText = n.getHours().toString().padStart(2, '0') + ":" + n.getMinutes().toString().padStart(2, '0');
-}, 1000);
+// Start de app wanneer het document klaar is
+document.addEventListener('DOMContentLoaded', init);
