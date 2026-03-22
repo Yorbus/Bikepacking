@@ -1,4 +1,4 @@
-const VERSION = 'v2'; // Verander dit naar v3, v4 etc. als je de code update
+const VERSION = 'v7';
 const CACHE_NAME = `bikepack-${VERSION}`;
 
 const ASSETS = [
@@ -12,33 +12,15 @@ const ASSETS = [
     'https://cdnjs.cloudflare.com/ajax/libs/leaflet-gpx/1.7.0/gpx.min.js'
 ];
 
-// Installatie: Sla alle bestanden op in de cache
-self.addEventListener('install', (event) => {
-    event.waitUntil(
-        caches.open(CACHE_NAME).then((cache) => {
-            return cache.addAll(ASSETS);
-        })
-    );
+self.addEventListener('install', (e) => {
+    e.waitUntil(caches.open(CACHE_NAME).then((cache) => cache.addAll(ASSETS)));
     self.skipWaiting();
 });
 
-// Activering: Verwijder oude caches van vorige versies
-self.addEventListener('activate', (event) => {
-    event.waitUntil(
-        caches.keys().then((cacheNames) => {
-            return Promise.all(
-                cacheNames.filter((name) => name !== CACHE_NAME)
-                    .map((name) => caches.delete(name))
-            );
-        })
-    );
+self.addEventListener('activate', (e) => {
+    e.waitUntil(caches.keys().then((keys) => Promise.all(keys.map((k) => k !== CACHE_NAME && caches.delete(k)))));
 });
 
-// Fetch: Serveer bestanden vanuit de cache als er geen internet is
-self.addEventListener('fetch', (event) => {
-    event.respondWith(
-        caches.match(event.request).then((response) => {
-            return response || fetch(event.request);
-        })
-    );
+self.addEventListener('fetch', (e) => {
+    e.respondWith(caches.match(e.request).then((res) => res || fetch(e.request)));
 });
