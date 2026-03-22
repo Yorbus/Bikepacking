@@ -1,0 +1,116 @@
+<!DOCTYPE html>
+<html>
+
+<head>
+    <title>Offline Bikepack</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" />
+    <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
+    <style>
+        #map {
+            height: 100vh;
+            width: 100vw;
+            position: fixed;
+            top: 0;
+            left: 0;
+        }
+
+        #ui {
+            position: absolute;
+            bottom: 20px;
+            left: 10px;
+            z-index: 1000;
+            display: flex;
+            flex-direction: column;
+            gap: 10px;
+        }
+
+        button {
+            padding: 15px;
+            background: #fff;
+            border-radius: 8px;
+            border: 1px solid #ccc;
+            font-weight: bold;
+        }
+
+        .stats {
+            background: rgba(0, 0, 0, 0.7);
+            color: white;
+            padding: 10px;
+            border-radius: 8px;
+            font-family: monospace;
+        }
+    </style>
+</head>
+
+<body>
+
+    <div id="ui">
+        <div class="stats" id="info">Snelheid: 0 km/u</div>
+        <input type="file" id="gpxInput" style="display:none" accept=".gpx">
+        <button onclick="document.getElementById('gpxInput').click()">Inladen GPX</button>
+        <button onclick="toggleFollow()">Toggle Volgen</button>
+    </div>
+
+    <div id="map"></div>
+
+    <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/leaflet-gpx/1.7.0/gpx.min.js"></script>
+
+    <script>
+        // 1. Service Worker registratie
+        if ('serviceWorker' in navigator) {
+            navigator.serviceWorker.register('sw.js');
+        }
+
+        // 2. Map Initialisatie
+        const map = L.map('map', { zoomControl: false }).setView([51.505, -0.09], 13);
+
+        // Let op: Voor echt offline gebruik moet je tiles PRE-LOADEN. 
+        // Deze layer probeert online te gaan, tenzij je een offline provider toevoegt.
+        const tiles = L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+            maxZoom: 18,
+            crossOrigin: true
+        }).addTo(map);
+
+        let followUser = false;
+        let userMarker = L.circleMarker([0, 0], { color: 'blue', radius: 8 }).addTo(map);
+
+        // 3. GPX Afhandeling
+        document.getElementById('gpxInput').addEventListener('change', function (e) {
+            const file = e.target.files[0];
+            const reader = new FileReader();
+            reader.onload = function (evt) {
+                new L.GPX(evt.target.result, {
+                    async: true,
+                    marker_options: { startIconUrl: '', endIconUrl: '', shadowUrl: '' }
+                }).on('loaded', function (e) {
+                    map.fitBounds(e.target.getBounds());
+                }).addTo(map);
+            };
+            reader.readAsText(file);
+        });
+
+        // 4. GPS Tracking (Zuinig op de batterij)
+        function toggleFollow() { followUser = !followUser; }
+
+        navigator.geolocation.watchPosition(pos => {
+            const { latitude, longitude, speed } = pos.coords;
+            const latlng = [latitude, longitude];
+
+            userMarker.setLatLng(latlng);
+            if (followUser) map.panTo(latlng);
+
+            document.getElementById('info').innerText = `Snelheid: ${Math.round(speed * 3.6 || 0)} km/u`;
+        }, err => console.error(err), {
+            enableHighAccuracy: true,
+            maximumAge: 1000
+        });
+
+        // 5. De "Offline" Hack voor Tiles
+        // Omdat je programmeur bent: gebruik de 'PouchDB' library om tiles te scrapen.
+        // Een simpele manier is om de tile-urls in een lijst te zetten en ze door de Service Worker te laten 'fetchen' terwijl je op wifi zit.
+    </script>
+
+</body>
+
+</html>
