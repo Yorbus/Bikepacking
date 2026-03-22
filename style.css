@@ -258,3 +258,73 @@ body {
     border-radius: 50%;
     box-shadow: 0 0 10px rgba(0, 0, 0, 0.5);
 }
+
+/* Instellingen schakelaar */
+.setting-item {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 15px 0;
+    border-bottom: 1px solid #333;
+}
+
+.setting-label {
+    font-size: 1.1rem;
+    font-weight: bold;
+    color: var(--text);
+}
+
+.switch {
+    position: relative;
+    display: inline-block;
+    width: 50px;
+    height: 24px;
+}
+
+.switch input {
+    opacity: 0;
+    width: 0;
+    height: 0;
+}
+
+.slider {
+    position: absolute;
+    cursor: pointer;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    background-color: #444;
+    transition: .4s;
+    border-radius: 24px;
+}
+
+.slider:before {
+    position: absolute;
+    content: "";
+    height: 16px;
+    width: 16px;
+    left: 4px;
+    bottom: 4px;
+    background-color: white;
+    transition: .4s;
+    border-radius: 50%;
+}
+
+input:checked+.slider {
+    background-color: var(--accent-bright);
+}
+
+input:checked+.slider:before {
+    transform: translateX(26px);
+}
+
+/* Kaart container styling voor rotatie */
+#map {
+    height: 100vh;
+    width: 100vw;
+    z-index: 1;
+    filter: invert(100%) hue-rotate(180deg) brightness(95%);
+    transition: transform 0.3s ease-out;
+    transform-origin: center center;
+}

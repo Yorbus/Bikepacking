@@ -9,6 +9,9 @@ let routePoints = [];
 let totalDistance = 0;
 let isNavigating = false;
 let gpsWatchId = null;
+let orientationWatchId = null;
+let currentHeading = 0;
+let autoRotateEnabled = true;
 
 // --- Kaart initialisatie ---
 const map = L.map('map', {
@@ -45,7 +48,8 @@ const elements = {
     gpxFile: document.getElementById('gpx-file'),
     mainMenu: document.getElementById('main-menu'),
     routePage: document.getElementById('route-page'),
-    settingsPage: document.getElementById('settings-page')
+    settingsPage: document.getElementById('settings-page'),
+    autoRotateToggle: document.getElementById('auto-rotate-toggle')
 };
 
 // --- Menu Functies ---
@@ -158,6 +162,9 @@ function startNavigation() {
     if (currentPos.lat !== 0) {
         map.setView(currentPos, 18, { animate: true });
     }
+
+    // Start orientatie tracking
+    initOrientationTracking();
 }
 
 function stopNavigation() {
@@ -170,6 +177,9 @@ function stopNavigation() {
     if (activeRouteLayer) {
         map.fitBounds(activeRouteLayer.getBounds());
     }
+
+    // Stop orientatie tracking
+    stopOrientationTracking();
 }
 
 // --- GPS Tracking ---
@@ -185,6 +195,56 @@ function initGPS() {
             timeout: 5000
         }
     );
+}
+
+// --- Orientatie Tracking ---
+function initOrientationTracking() {
+    if (!window.DeviceOrientationEvent) {
+        console.warn('DeviceOrientation niet ondersteund');
+        return;
+    }
+
+    if (orientationWatchId) return;
+
+    orientationWatchId = window.addEventListener('deviceorientation', handleOrientation, true);
+}
+
+function stopOrientationTracking() {
+    if (orientationWatchId) {
+        window.removeEventListener('deviceorientation', handleOrientation, true);
+        orientationWatchId = null;
+
+        // Reset kaart rotatie
+        map.getContainer().style.transform = 'rotate(0deg)';
+    }
+}
+
+function handleOrientation(event) {
+    if (!isNavigating || !autoRotateEnabled) return;
+
+    // Gebruik alpha (kompass richting) als beschikbaar, anders gamma (hoek links/rechts)
+    let heading = event.alpha;
+
+    if (typeof heading !== 'number' || isNaN(heading)) {
+        // Fallback naar gamma (hoek van het apparaat)
+        heading = event.gamma;
+        if (typeof heading !== 'number' || isNaN(heading)) return;
+    }
+
+    // Normalizeer heading naar 0-360 graden
+    heading = (heading + 360) % 360;
+
+    // Sla huidige heading op
+    currentHeading = heading;
+
+    // Roteer de kaart container
+    rotateMap(heading);
+}
+
+function rotateMap(degrees) {
+    const mapContainer = map.getContainer();
+    mapContainer.style.transform = `rotate(${degrees}deg)`;
+    mapContainer.style.transition = 'transform 0.3s ease-out';
 }
 
 function handlePosition(position) {
@@ -358,6 +418,9 @@ function processGPXFile(gpxData, fileName) {
 
 // --- Initialisatie ---
 function init() {
+    // Laad instellingen
+    loadSettings();
+
     renderRouteList();
 
     if (activeRouteId) {
@@ -373,6 +436,26 @@ function init() {
     initGPS();
     updateTime();
     setInterval(updateTime, 60000); // Update elke minuut
+}
+
+function loadSettings() {
+    // Laad auto-rotate instelling
+    const savedAutoRotate = localStorage.getItem('auto_rotate_enabled');
+    if (savedAutoRotate !== null) {
+        autoRotateEnabled = savedAutoRotate === 'true';
+    } else {
+        // Standaard waarde is true
+        autoRotateEnabled = true;
+    }
+
+    // Update UI
+    if (elements.autoRotateToggle) {
+        elements.autoRotateToggle.checked = autoRotateEnabled;
+        elements.autoRotateToggle.addEventListener('change', (e) => {
+            autoRotateEnabled = e.target.checked;
+            localStorage.setItem('auto_rotate_enabled', autoRotateEnabled.toString());
+        });
+    }
 }
 
 function updateTime() {

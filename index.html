@@ -65,7 +65,16 @@
     <div id="settings-page" class="full-page">
         <button class="close-btn" onclick="closePages()">&times;</button>
         <h2 class="accent-text">Instellingen</h2>
-        <p style="opacity:0.6;">Problemen? Wis alle lokale gegevens:</p>
+
+        <div class="setting-item">
+            <label class="setting-label">📱 Kaart Rotatie</label>
+            <label class="switch">
+                <input type="checkbox" id="auto-rotate-toggle" checked>
+                <span class="slider"></span>
+            </label>
+        </div>
+
+        <p style="opacity:0.6; margin-top:20px;">Problemen? Wis alle lokale gegevens:</p>
         <button class="btn-primary" onclick="resetApp()" style="background:#c0392b;">🔥 RESET ALLE DATA</button>
     </div>
 
