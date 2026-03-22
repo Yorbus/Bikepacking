@@ -5,47 +5,28 @@ let routePoints = [];
 let totalDistance = 0;
 let isNavigating = false;
 
-// Kaart setup
 const map = L.map('map', { zoomControl: false }).setView([51.05, 3.73], 13);
+// Tip: De kaart-tegels laden alleen online, maar je route en navigatie werken 100% offline.
 L.tileLayer('https://{s}.basemaps.cartocdn.com/rastertiles/voyager/{z}/{x}/{y}{r}.png').addTo(map);
-const userMarker = L.circleMarker([0, 0], { radius: 10, fillColor: '#3498db', color: '#fff', weight: 3, fillOpacity: 1 }).addTo(map);
 
-// MENU LOGICA - Nu met geforceerde display check
+const userMarker = L.marker([0, 0], {
+    icon: L.divIcon({
+        className: 'user-icon',
+        html: '<div style="width:20px;height:20px;background:#2ecc71;border:3px solid white;border-radius:50%;box-shadow:0 0 10px rgba(0,0,0,0.5);"></div>'
+    })
+}).addTo(map);
+
+// --- Menu Functies ---
 function toggleMenu() {
     const m = document.getElementById('main-menu');
-    if (m.style.display === 'block') {
-        m.style.display = 'none';
-    } else {
-        closePages(); // Sluit andere schermen eerst
-        m.style.display = 'block';
-    }
+    m.style.display = (m.style.display === 'block') ? 'none' : 'block';
 }
+function showRoutes() { closePages(); document.getElementById('route-page').style.display = 'block'; renderRouteList(); }
+function showSettings() { closePages(); document.getElementById('settings-page').style.display = 'block'; }
+function closePages() { document.querySelectorAll('.full-page').forEach(p => p.style.display = 'none'); }
+function resetApp() { if (confirm("Wis alles?")) { localStorage.clear(); location.reload(); } }
 
-function showRoutes() {
-    closePages();
-    document.getElementById('route-page').style.display = 'block';
-    renderRouteList();
-}
-
-function showSettings() {
-    closePages();
-    document.getElementById('settings-page').style.display = 'block';
-}
-
-function closePages() {
-    document.getElementById('main-menu').style.display = 'none';
-    document.getElementById('route-page').style.display = 'none';
-    document.getElementById('settings-page').style.display = 'none';
-}
-
-function resetApp() {
-    if (confirm("Wis alle data?")) {
-        localStorage.clear();
-        location.reload();
-    }
-}
-
-// GPX Laden
+// --- Route Handling ---
 document.getElementById('gpx-file').addEventListener('change', function (e) {
     Array.from(e.target.files).forEach(file => {
         const reader = new FileReader();
@@ -53,7 +34,7 @@ document.getElementById('gpx-file').addEventListener('change', function (e) {
             const gpxData = evt.target.result;
             new L.GPX(gpxData, { async: true }).on('loaded', (ev) => {
                 const dist = (ev.target.get_distance() / 1000).toFixed(1);
-                const newId = 'r-' + Date.now() + '-' + Math.floor(Math.random() * 1000);
+                const newId = 'r-' + Date.now();
                 savedRoutes.push({ id: newId, name: file.name.replace('.gpx', ''), distance: dist, data: gpxData });
                 localStorage.setItem('bikepack_routes', JSON.stringify(savedRoutes));
                 renderRouteList();
@@ -68,7 +49,7 @@ function renderRouteList() {
     list.innerHTML = savedRoutes.map(r => `
         <div class="route-card ${r.id == activeRouteId ? 'active' : ''}" onclick="loadRoute('${r.id}')">
             <div style="flex:1"><strong>${r.name}</strong><br><small>${r.distance} km</small></div>
-            <button onclick="event.stopPropagation(); deleteRoute('${r.id}')" style="background:none; border:none; color:#ff4444; font-size:1.5rem;">&times;</button>
+            <button onclick="event.stopPropagation(); deleteRoute('${r.id}')" style="color:#ff4444; background:none; border:none; font-size:1.5rem;">&times;</button>
         </div>
     `).join('');
 }
@@ -78,69 +59,99 @@ function loadRoute(id) {
     if (!route) return;
     activeRouteId = id;
     localStorage.setItem('active_route_id', id);
-
-    document.getElementById('start-nav-btn').style.display = 'block';
-    document.getElementById('stop-nav-btn').style.display = 'none';
-    document.getElementById('dist-todo').innerText = route.distance + " km over";
-    isNavigating = false;
+    closePages();
 
     if (activeRouteLayer) map.removeLayer(activeRouteLayer);
-    renderRouteList();
-
     activeRouteLayer = new L.GPX(route.data, {
         async: true, polyline_options: { color: '#2ecc71', weight: 6, opacity: 0.8 }
     }).on('loaded', (e) => {
-        map.fitBounds(e.target.getBounds(), { padding: [40, 40] });
+        map.fitBounds(e.target.getBounds());
         routePoints = e.target.get_planar_coords();
         totalDistance = parseFloat(route.distance);
-        closePages();
+        document.getElementById('start-nav-btn').style.display = 'block';
     }).addTo(map);
 }
 
-// Navigatie
+// --- Navigatie Logica ---
 function startNavigation() {
     isNavigating = true;
+    document.getElementById('nav-instruction').style.display = 'flex';
     document.getElementById('start-nav-btn').style.display = 'none';
     document.getElementById('stop-nav-btn').style.display = 'block';
-    if (userMarker.getLatLng().lat !== 0) {
-        map.setView(userMarker.getLatLng(), 17);
-    }
 }
 
 function stopNavigation() {
     isNavigating = false;
+    document.getElementById('nav-instruction').style.display = 'none';
     document.getElementById('start-nav-btn').style.display = 'block';
     document.getElementById('stop-nav-btn').style.display = 'none';
-    if (activeRouteLayer) map.fitBounds(activeRouteLayer.getBounds());
 }
 
-// GPS
 navigator.geolocation.watchPosition(pos => {
-    const { latitude, longitude, speed } = pos.coords;
+    const { latitude, longitude, speed, heading } = pos.coords;
     const p = L.latLng(latitude, longitude);
     userMarker.setLatLng(p);
     document.getElementById('speed').innerText = Math.round(speed * 3.6) || 0;
-    if (isNavigating) map.panTo(p);
-    if (activeRouteId && routePoints.length > 0) calculateProgress(p);
+
+    if (isNavigating) {
+        map.panTo(p);
+        analyzeRouteAhead(p);
+    }
 }, null, { enableHighAccuracy: true });
 
-function calculateProgress(p) {
-    let minDist = Infinity, index = 0;
+function analyzeRouteAhead(userPos) {
+    if (routePoints.length < 10) return;
+
+    // 1. Vind waar we zijn op de lijn
+    let minDist = Infinity, idx = 0;
     routePoints.forEach((pt, i) => {
-        const d = p.distanceTo([pt.lat, pt.lon]);
-        if (d < minDist) { minDist = d; index = i; }
+        const d = userPos.distanceTo([pt.lat, pt.lon]);
+        if (d < minDist) { minDist = d; idx = i; }
     });
-    let done = 0;
-    for (let i = 0; i < index; i++) done += L.latLng(routePoints[i]).distanceTo(L.latLng(routePoints[i + 1]));
-    updateUI(done / 1000, totalDistance);
+
+    // 2. Kijk naar de "bocht" die eraan komt (kijk 20-50 meter vooruit)
+    let lookAheadIdx = Math.min(idx + 15, routePoints.length - 1);
+    let targetPoint = routePoints[lookAheadIdx];
+    let distToAction = userPos.distanceTo([targetPoint.lat, targetPoint.lon]);
+
+    // Bereken hoek (bearing)
+    let b1 = getBearing(routePoints[idx], routePoints[Math.min(idx + 5, routePoints.length - 1)]);
+    let b2 = getBearing(routePoints[Math.min(idx + 5, routePoints.length - 1)], routePoints[lookAheadIdx]);
+    let diff = b2 - b1;
+    if (diff > 180) diff -= 360;
+    if (diff < -180) diff += 360;
+
+    // 3. Vertaal hoek naar instructie
+    let icon = "↑", text = "Weg volgen";
+
+    if (diff > 25) { icon = "→"; text = "Sla rechtsaf"; }
+    else if (diff > 70) { icon = "↱"; text = "Scherpe bocht rechts"; }
+    else if (diff < -25) { icon = "←"; text = "Sla linksaf"; }
+    else if (diff < -70) { icon = "↰"; text = "Scherpe bocht links"; }
+
+    // Update UI
+    document.getElementById('nav-icon').innerText = icon;
+    document.getElementById('nav-step').innerText = text;
+    document.getElementById('nav-dist').innerText = Math.round(distToAction) + " m";
+
+    // Update voortgangsbalk
+    let done = (idx / routePoints.length) * totalDistance;
+    updateUI(done, totalDistance);
+}
+
+function getBearing(p1, p2) {
+    const lat1 = p1.lat * Math.PI / 180, lat2 = p2.lat * Math.PI / 180;
+    const lon1 = p1.lon * Math.PI / 180, lon2 = p2.lon * Math.PI / 180;
+    const y = Math.sin(lon2 - lon1) * Math.cos(lat2);
+    const x = Math.cos(lat1) * Math.sin(lat2) - Math.sin(lat1) * Math.cos(lat2) * Math.cos(lon2 - lon1);
+    return Math.atan2(y, x) * 180 / Math.PI;
 }
 
 function updateUI(done, total) {
-    const todo = Math.max(0, total - done);
     const pct = (done / total) * 100;
     document.getElementById('progress-fill').style.width = pct + "%";
     document.getElementById('dist-done').innerText = done.toFixed(1) + " km";
-    document.getElementById('dist-todo').innerText = todo.toFixed(1) + " km over";
+    document.getElementById('dist-todo').innerText = (total - done).toFixed(1) + " km over";
 }
 
 function deleteRoute(id) {
