@@ -210,7 +210,30 @@ function initOrientationTracking() {
     console.log('Start orientatie tracking');
     orientationWatchId = true;
 
-    // Probeer eerst op window, fallback naar document
+    // Safari specifieke handling
+    if (typeof DeviceOrientationEvent !== 'undefined' && typeof DeviceOrientationEvent.requestPermission === 'function') {
+        // iOS 13+ vereist expliciete toestemming
+        DeviceOrientationEvent.requestPermission()
+            .then(permissionState => {
+                if (permissionState === 'granted') {
+                    setupOrientationListener();
+                } else {
+                    alert('Toestemming voor motion sensors is geweigerd. Ga naar Instellingen > Safari > Beweging en Oriëntatie om dit in te schakelen.');
+                    orientationWatchId = null;
+                }
+            })
+            .catch(error => {
+                console.warn('Toestemming voor motion sensors mislukt:', error);
+                // Probeer zonder toestemming (werkt op sommige oudere iOS versies)
+                setupOrientationListener();
+            });
+    } else {
+        // Android/oude iOS versies
+        setupOrientationListener();
+    }
+}
+
+function setupOrientationListener() {
     try {
         window.addEventListener('deviceorientation', handleOrientation, true);
     } catch (e) {
