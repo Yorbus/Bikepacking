@@ -201,34 +201,64 @@ function initGPS() {
 function initOrientationTracking() {
     if (!window.DeviceOrientationEvent) {
         console.warn('DeviceOrientation niet ondersteund');
+        alert('Uw apparaat ondersteunt geen orientatie tracking');
         return;
     }
 
     if (orientationWatchId) return;
 
-    orientationWatchId = window.addEventListener('deviceorientation', handleOrientation, true);
+    console.log('Start orientatie tracking');
+    orientationWatchId = true;
+
+    // Probeer eerst op window, fallback naar document
+    try {
+        window.addEventListener('deviceorientation', handleOrientation, true);
+    } catch (e) {
+        document.addEventListener('deviceorientation', handleOrientation, true);
+    }
 }
 
 function stopOrientationTracking() {
     if (orientationWatchId) {
-        window.removeEventListener('deviceorientation', handleOrientation, true);
+        console.log('Stop orientatie tracking');
+
+        try {
+            window.removeEventListener('deviceorientation', handleOrientation, true);
+        } catch (e) {
+            document.removeEventListener('deviceorientation', handleOrientation, true);
+        }
+
         orientationWatchId = null;
 
         // Reset kaart rotatie
-        map.getContainer().style.transform = 'rotate(0deg)';
+        const mapContainer = map.getContainer();
+        mapContainer.style.transform = 'rotate(0deg)';
+        mapContainer.style.transition = 'transform 0.5s ease-out';
     }
 }
 
 function handleOrientation(event) {
     if (!isNavigating || !autoRotateEnabled) return;
 
+    // Debug logging
+    console.log('Orientatie event:', {
+        alpha: event.alpha,
+        beta: event.beta,
+        gamma: event.gamma,
+        absolute: event.absolute
+    });
+
     // Gebruik alpha (kompass richting) als beschikbaar, anders gamma (hoek links/rechts)
     let heading = event.alpha;
 
-    if (typeof heading !== 'number' || isNaN(heading)) {
+    if (typeof heading !== 'number' || isNaN(heading) || heading === null) {
+        console.log('Alpha niet beschikbaar, probeer gamma');
         // Fallback naar gamma (hoek van het apparaat)
         heading = event.gamma;
-        if (typeof heading !== 'number' || isNaN(heading)) return;
+        if (typeof heading !== 'number' || isNaN(heading) || heading === null) {
+            console.log('Geen orientatie data beschikbaar');
+            return;
+        }
     }
 
     // Normalizeer heading naar 0-360 graden
