@@ -9,7 +9,6 @@ L.tileLayer('https://{s}.basemaps.cartocdn.com/rastertiles/voyager/{z}/{x}/{y}{r
 
 const userMarker = L.circleMarker([0, 0], { radius: 8, fillColor: '#2ecc71', color: '#fff', weight: 2, fillOpacity: 1 }).addTo(map);
 
-// 1. UI Navigation
 function toggleMenu() {
     const m = document.getElementById('main-menu');
     m.style.display = m.style.display === 'block' ? 'none' : 'block';
@@ -25,12 +24,12 @@ function closePages() {
     document.querySelectorAll('.full-page').forEach(p => p.style.display = 'none');
 }
 
-// 2. Route Management
 document.getElementById('gpx-file').addEventListener('change', function (e) {
     Array.from(e.target.files).forEach(file => {
         const reader = new FileReader();
         reader.onload = (evt) => {
             const gpxData = evt.target.result;
+            // Alleen toevoegen aan lijst, niet direct laden
             new L.GPX(gpxData, { async: true }).on('loaded', (e) => {
                 const dist = (e.target.get_distance() / 1000).toFixed(1);
                 savedRoutes.push({ id: Date.now() + Math.random(), name: file.name.replace('.gpx', ''), distance: dist, data: gpxData });
@@ -71,17 +70,20 @@ function loadRoute(id) {
         map.fitBounds(e.target.getBounds());
         routePoints = e.target.get_planar_coords();
         totalDistance = e.target.get_distance() / 1000;
+
+        // Update UI direct na laden
+        updateUI(0, totalDistance);
         closePages();
-        updateUI(0, totalDistance); // Reset balkje
     }).addTo(map);
 }
 
 function deleteRoute(id) {
-    if (confirm("Route definitief verwijderen?")) {
+    if (confirm("Route verwijderen?")) {
         savedRoutes = savedRoutes.filter(r => r.id != id);
         localStorage.setItem('bikepack_routes', JSON.stringify(savedRoutes));
         if (id == activeRouteId) {
             activeRouteId = null;
+            localStorage.removeItem('active_route_id');
             if (activeRouteLayer) map.removeLayer(activeRouteLayer);
             document.getElementById('dist-todo').innerText = "Geen route";
             document.getElementById('progress-fill').style.width = "0%";
@@ -90,50 +92,44 @@ function deleteRoute(id) {
     }
 }
 
-// 3. GPS & Progress
 navigator.geolocation.watchPosition(pos => {
     const { latitude, longitude, speed, altitude } = pos.coords;
     const p = L.latLng(latitude, longitude);
     userMarker.setLatLng(p);
-
     document.getElementById('speed').innerText = Math.round(speed * 3.6) || 0;
     document.getElementById('altitude').innerText = altitude ? Math.round(altitude) + 'm' : '-';
 
-    if (activeRouteLayer && routePoints.length > 0) {
-        calculateProgress(p);
-    }
+    // Alleen voortgang berekenen als er een route actief is
+    if (activeRouteId && routePoints.length > 0) calculateProgress(p);
 }, null, { enableHighAccuracy: true });
 
 function calculateProgress(userLatLng) {
-    let minDist = Infinity;
-    let index = 0;
-
+    let minDist = Infinity; let index = 0;
     routePoints.forEach((pt, i) => {
         const d = userLatLng.distanceTo([pt.lat, pt.lon]);
         if (d < minDist) { minDist = d; index = i; }
     });
-
     let distanceDone = 0;
     for (let i = 0; i < index; i++) {
         distanceDone += L.latLng(routePoints[i]).distanceTo(L.latLng(routePoints[i + 1]));
     }
-
     updateUI(distanceDone / 1000, totalDistance);
 }
 
 function updateUI(done, total) {
-    const todo = total - done;
+    const todo = Math.max(0, total - done);
     const pct = (done / total) * 100;
     document.getElementById('progress-fill').style.width = pct + "%";
     document.getElementById('dist-done').innerText = done.toFixed(1) + " km";
     document.getElementById('dist-todo').innerText = todo.toFixed(1) + " km over";
 }
 
-// Startup
+// Startup: Alleen laden als er een opgeslagen ID is
 map.locate({ setView: true, maxZoom: 15 });
-if (activeRouteId) loadRoute(activeRouteId);
+if (activeRouteId) {
+    setTimeout(() => loadRoute(activeRouteId), 500); // Kleine delay voor stabiliteit
+}
 
-// Clock
 setInterval(() => {
     const n = new Date();
     document.getElementById('time').innerText = n.getHours().toString().padStart(2, '0') + ":" + n.getMinutes().toString().padStart(2, '0');
