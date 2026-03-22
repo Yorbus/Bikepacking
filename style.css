@@ -44,7 +44,7 @@ body {
 }
 
 .stat-value {
-    font-size: 1.2rem;
+    font-size: 1.4rem;
     font-weight: bold;
     color: var(--accent-bright);
 }
@@ -61,14 +61,14 @@ body {
     right: 0;
     background: var(--card-bg);
     border-top: 2px solid var(--accent-dark);
-    padding: 20px 20px 35px;
+    padding: 20px 20px 40px;
     border-radius: 20px 20px 0 0;
 }
 
 .progress-bar-bg {
     background: #333;
-    height: 10px;
-    border-radius: 5px;
+    height: 12px;
+    border-radius: 6px;
     margin: 10px 0;
     overflow: hidden;
 }
