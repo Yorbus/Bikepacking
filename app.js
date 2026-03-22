@@ -12,6 +12,7 @@ let gpsWatchId = null;
 let orientationWatchId = null;
 let currentHeading = 0;
 let autoRotateEnabled = true;
+let phoneOrientation = 'vertical'; // 'vertical' of 'horizontal'
 
 // --- Kaart initialisatie ---
 const map = L.map('map', {
@@ -268,7 +269,8 @@ function handleOrientation(event) {
         alpha: event.alpha,
         beta: event.beta,
         gamma: event.gamma,
-        absolute: event.absolute
+        absolute: event.absolute,
+        phoneOrientation: phoneOrientation
     });
 
     // Gebruik alpha (kompass richting) als beschikbaar, anders gamma (hoek links/rechts)
@@ -287,11 +289,20 @@ function handleOrientation(event) {
     // Normalizeer heading naar 0-360 graden
     heading = (heading + 360) % 360;
 
+    // Pas rotatie aan op basis van telefoon orientatie
+    let adjustedHeading = heading;
+
+    if (phoneOrientation === 'horizontal') {
+        // Bij horizontale orientatie, draai 90 graden extra
+        adjustedHeading = (heading + 90) % 360;
+    }
+    // Bij verticale orientatie blijft de heading zoals hij is
+
     // Sla huidige heading op
-    currentHeading = heading;
+    currentHeading = adjustedHeading;
 
     // Roteer de kaart container
-    rotateMap(heading);
+    rotateMap(adjustedHeading);
 }
 
 function rotateMap(degrees) {
@@ -501,12 +512,43 @@ function loadSettings() {
         autoRotateEnabled = true;
     }
 
+    // Laad telefoon orientatie instelling
+    const savedPhoneOrientation = localStorage.getItem('phone_orientation');
+    if (savedPhoneOrientation !== null) {
+        phoneOrientation = savedPhoneOrientation;
+    } else {
+        // Standaard waarde is vertical
+        phoneOrientation = 'vertical';
+    }
+
     // Update UI
     if (elements.autoRotateToggle) {
         elements.autoRotateToggle.checked = autoRotateEnabled;
         elements.autoRotateToggle.addEventListener('change', (e) => {
             autoRotateEnabled = e.target.checked;
             localStorage.setItem('auto_rotate_enabled', autoRotateEnabled.toString());
+        });
+    }
+
+    // Update telefoon orientatie UI
+    const verticalRadio = document.getElementById('vertical-orientation');
+    const horizontalRadio = document.getElementById('horizontal-orientation');
+
+    if (verticalRadio && horizontalRadio) {
+        if (phoneOrientation === 'vertical') {
+            verticalRadio.checked = true;
+        } else {
+            horizontalRadio.checked = true;
+        }
+
+        verticalRadio.addEventListener('change', () => {
+            phoneOrientation = 'vertical';
+            localStorage.setItem('phone_orientation', phoneOrientation);
+        });
+
+        horizontalRadio.addEventListener('change', () => {
+            phoneOrientation = 'horizontal';
+            localStorage.setItem('phone_orientation', phoneOrientation);
         });
     }
 }
