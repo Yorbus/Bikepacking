@@ -67,9 +67,11 @@
 
         // Let op: Voor echt offline gebruik moet je tiles PRE-LOADEN. 
         // Deze layer probeert online te gaan, tenzij je een offline provider toevoegt.
-        const tiles = L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
-            maxZoom: 18,
-            crossOrigin: true
+        // Deze stijl is 'Voyager', erg strak en modern (Apple Maps-achtig)
+        const tiles = L.tileLayer('https://{s}.basemaps.cartocdn.com/rastertiles/voyager/{z}/{x}/{y}{r}.png', {
+            attribution: '© OpenStreetMap contributors © CARTO',
+            subdomains: 'abcd',
+            maxZoom: 19
         }).addTo(map);
 
         let followUser = false;
