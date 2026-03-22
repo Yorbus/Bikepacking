@@ -139,14 +139,13 @@ body {
     padding: 15px;
     border-radius: 12px;
     margin-bottom: 12px;
-    border: 2px solid transparent;
-    /* Veranderd van 1px solid #333 */
+    border: 2px solid #333;
     display: flex;
     justify-content: space-between;
     align-items: center;
 }
 
 .route-card.active {
-    border: 2px solid var(--accent-bright);
+    border-color: var(--accent-bright);
     background: #252525;
 }

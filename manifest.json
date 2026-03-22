@@ -1,10 +1,10 @@
 {
-    "name": "Bikepack Nav",
-    "short_name": "Nav",
-    "start_url": "index.html",
+    "name": "Bikepack Pro",
+    "short_name": "Bikepack",
+    "start_url": "./index.html",
     "display": "standalone",
-    "background_color": "#ffffff",
-    "theme_color": "#2196F3",
+    "background_color": "#121212",
+    "theme_color": "#27ae60",
     "icons": [
         {
             "src": "icon.png",
