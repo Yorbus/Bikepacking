@@ -13,6 +13,10 @@
 
 <body>
 
+    <div id="menu-toggle" class="overlay" onclick="toggleMenu()">
+        <div class="hamburger-line"></div>
+    </div>
+
     <div id="top-bar" class="overlay">
         <div class="stat-item"><span class="stat-value" id="speed">0</span><span class="stat-label">km/u</span></div>
         <div class="stat-item"><span class="stat-value" id="altitude">-</span><span class="stat-label">hoogte</span>
@@ -20,10 +24,6 @@
         <div class="stat-item"><span class="stat-value" id="avg-speed">0</span><span class="stat-label">gem.</span>
         </div>
         <div class="stat-item"><span class="stat-value" id="time">00:00</span><span class="stat-label">tijd</span></div>
-    </div>
-
-    <div id="menu-toggle" class="overlay" onclick="toggleMenu()">
-        <div class="hamburger-line"></div>
     </div>
 
     <div id="map"></div>
