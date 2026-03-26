@@ -157,9 +157,15 @@ body {
     align-items: center;
     justify-content: center;
     border: 1px solid var(--accent-dark);
-    z-index: 3000 !important;
-    /* DIT IS DE FIX: Altijd bovenop */
+    z-index: 3000;
     cursor: pointer;
+    transition: transform 0.3s ease;
+}
+
+#menu-toggle.hidden {
+    transform: translateX(100px);
+    opacity: 0;
+    pointer-events: none;
 }
 
 .full-page {
